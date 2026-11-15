@@ -30,7 +30,7 @@ function draw(buffer,count){gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVerte
 const keys=new Set();let active=false,paused=false,finished=false,x=0,z=165,heading=Math.PI/2,speed=0,nitro=1,time=0,lapTime=0,lap=1,progress=0,lastAngle=0,best=null,cam=[-12,6,165],last=0;
 try{best=Number(localStorage.getItem('apex-best'))||null;}catch{}
 const format=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${(t%60).toFixed(2).padStart(5,'0')}`;
-function reset(){x=0;z=165;heading=Math.PI/2;speed=0;nitro=1;time=0;lapTime=0;lap=1;progress=0;lastAngle=0;finished=false;cam=[-12,6,165];}
+function reset(){resetRivals();x=0;z=165;heading=Math.PI/2;speed=0;nitro=1;time=0;lapTime=0;lap=1;progress=0;lastAngle=0;finished=false;cam=[-12,6,165];}
 function start(){reset();active=true;paused=false;$('overlay').classList.add('hidden');$('pause').textContent='PAUSE  P';}
 function pause(){if(!active||finished)return;paused=!paused;keys.clear();$('pause').textContent=paused?'RESUME  P':'PAUSE  P';$('message').textContent=paused?'PAUSED':'';}
 $('start').onclick=start;$('pause').onclick=pause;
@@ -39,10 +39,10 @@ function car(cx,cz,a,color){box(cx,.35,cz,1.9,.55,4,color,a);box(cx,.9,cz-.2*Mat
 let boost=false;
 function frame(now){requestAnimationFrame(frame);const dt=Math.min((now-last)/1000||0,.04);last=now;const scale=Math.min(devicePixelRatio||1,1.7),w=Math.floor(viewW()*scale),h=Math.floor(viewH()*scale);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}
 boost=false;let offroad=Math.abs((Math.sqrt((x/RX)**2+(z/RZ)**2)-1)*125)>8.5;
-if(active&&!paused&&!finished){time+=dt;lapTime+=dt;const throttle=keys.has('ArrowUp')||mobile.gas,brake=keys.has('ArrowDown'),drift=keys.has('Space'),steer=Math.max(-1,Math.min(1,Number(keys.has('ArrowLeft'))-Number(keys.has('ArrowRight'))+mobile.steer));boost=throttle&&(keys.has('ShiftLeft')||keys.has('ShiftRight'))&&nitro>0&&speed>5;if(boost)nitro=Math.max(0,nitro-dt*.24);else nitro=Math.min(1,nitro+dt*.10);speed+=(throttle?(boost?25:16):0)*dt;if(brake)speed-= (speed>0?33:9)*dt;speed-=speed*(offroad?1.5:drift?.8:.17)*dt;speed=Math.max(-12,Math.min(boost?94:67,speed));heading+=steer*Math.min(Math.abs(speed)/15,1)*dt*(drift?2.15:1.15)*Math.sign(speed||1);x+=Math.sin(heading)*speed*dt;z+=Math.cos(heading)*speed*dt;if(Math.hypot(x,z)>650){x=0;z=165;heading=Math.PI/2;speed=0;lastAngle=0;progress=0;}
-const angle=Math.atan2(x/RX,z/RZ);let delta=angle-lastAngle;if(delta>Math.PI)delta-=Math.PI*2;if(delta< -Math.PI)delta+=Math.PI*2;lastAngle=angle;if(!offroad)progress+=delta;if(progress>=Math.PI*2){progress-=Math.PI*2;if(!best||lapTime<best){best=lapTime;try{localStorage.setItem('apex-best',String(best));}catch{}}lapTime=0;lap++;if(lap>3){finished=true;speed=0;$('message').textContent=`FINISH · ${format(time)}`;$('overlay').classList.remove('hidden');document.querySelector('h1').innerHTML='CIRCUIT<br><em>COMPLETE.</em>';document.querySelector('.intro p').textContent=`Three laps in ${format(time)}. Best lap: ${format(best)}.`;$('start').innerHTML='RACE AGAIN <span>↗</span>';}}}
-const desired=[x-Math.sin(heading)*11,5.6+Math.abs(speed)*.018,z-Math.cos(heading)*11];for(let i=0;i<3;i++)cam[i]+=(desired[i]-cam[i])*(1-Math.exp(-dt*7));gl.uniformMatrix4fv(vp,false,camera(cam,[x+Math.sin(heading)*10,1,z+Math.cos(heading)*10],boost?1.22:1.08));gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);draw(worldBuffer,staticData.length/6);vertices=[];car(x,z,heading,[.72,.98,.27]);gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.DYNAMIC_DRAW);draw(dynamicBuffer,vertices.length/6);
-$('speed').textContent=String(Math.round(Math.abs(speed)*3.6)).padStart(3,'0');$('nitro').style.width=`${nitro*100}%`;$('time').textContent=format(time);$('best').textContent=best?format(best):'—';$('lap').innerHTML=`0${Math.min(lap,3)} <small>/ 03</small>`;$('state').textContent=boost?'NITRO ENGAGED':offroad?'OFF TRACK':keys.has('Space')&&Math.abs(speed)>3?'HANDBRAKE':active?'MIDNIGHT CIRCUIT':'READY TO RACE';}
+if(active&&!paused&&!finished){time+=dt;lapTime+=dt;const throttle=keys.has('ArrowUp')||mobile.gas,brake=keys.has('ArrowDown'),drift=keys.has('Space'),steer=Math.max(-1,Math.min(1,Number(keys.has('ArrowLeft'))-Number(keys.has('ArrowRight'))+mobile.steer));boost=throttle&&(keys.has('ShiftLeft')||keys.has('ShiftRight'))&&nitro>0&&speed>5;if(boost)nitro=Math.max(0,nitro-dt*.24);else nitro=Math.min(1,nitro+dt*.10);speed+=(throttle?(boost?25:16):0)*dt;if(brake)speed-= (speed>0?33:9)*dt;speed-=speed*(offroad?1.5:drift?.8:.17)*dt;speed=Math.max(-12,Math.min(boost?94:67,speed));heading+=steer*Math.min(Math.abs(speed)/15,1)*dt*(drift?2.15:1.15)*Math.sign(speed||1);x+=Math.sin(heading)*speed*dt;z+=Math.cos(heading)*speed*dt;if(Math.hypot(x,z)>650){x=0;z=165;heading=Math.PI/2;speed=0;lastAngle=0;progress=0;}updateRivals(dt);
+const angle=Math.atan2(x/RX,z/RZ);let delta=angle-lastAngle;if(delta>Math.PI)delta-=Math.PI*2;if(delta< -Math.PI)delta+=Math.PI*2;lastAngle=angle;if(!offroad)progress+=delta;if(progress>=Math.PI*2){progress-=Math.PI*2;if(!best||lapTime<best){best=lapTime;try{localStorage.setItem('apex-best',String(best));}catch{}}lapTime=0;lap++;if(lap>3){finished=true;speed=0;finishPos=racePosition();$('message').textContent=`P${finishPos} · ${format(time)}`;$('overlay').classList.remove('hidden');document.querySelector('h1').innerHTML='CIRCUIT<br><em>COMPLETE.</em>';document.querySelector('.intro p').textContent=`You finished ${ordinal(finishPos)} of ${rivals.length+1}. Three laps in ${format(time)}. Best lap: ${format(best)}.`;$('start').innerHTML='RACE AGAIN <span>↗</span>';}}}
+const desired=[x-Math.sin(heading)*11,5.6+Math.abs(speed)*.018,z-Math.cos(heading)*11];for(let i=0;i<3;i++)cam[i]+=(desired[i]-cam[i])*(1-Math.exp(-dt*7));gl.uniformMatrix4fv(vp,false,camera(cam,[x+Math.sin(heading)*10,1,z+Math.cos(heading)*10],boost?1.22:1.08));gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);draw(worldBuffer,staticData.length/6);vertices=[];car(x,z,heading,[.72,.98,.27]);drawRivals();gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.DYNAMIC_DRAW);draw(dynamicBuffer,vertices.length/6);
+$('speed').textContent=String(Math.round(Math.abs(speed)*3.6)).padStart(3,'0');$('nitro').style.width=`${nitro*100}%`;$('time').textContent=format(time);$('best').textContent=best?format(best):'—';$('pos').innerHTML=`${racePosition()} <small>/ ${rivals.length+1}</small>`;$('lap').innerHTML=`0${Math.min(lap,3)} <small>/ 03</small>`;$('state').textContent=boost?'NITRO ENGAGED':offroad?'OFF TRACK':keys.has('Space')&&Math.abs(speed)>3?'HANDBRAKE':active?'MIDNIGHT CIRCUIT':'READY TO RACE';}
 requestAnimationFrame(frame);
 
 // Mobile: hold-to-gas button + gyroscope tilt steering
@@ -78,3 +78,43 @@ applyRotLock();}
 window.addEventListener('orientationchange',()=>setTimeout(applyRotLock,50));
 window.addEventListener('resize',applyRotLock);
 document.getElementById('start')?.addEventListener('click',lockOrientation);
+
+// Rival cars: follow the track centre-line by parameter t (one lap = 2*PI), each with its own lane, pace and weave
+var finishPos=0;
+const RIVAL_DEF=[
+ {name:'VOLT',color:[.95,.28,.25],pace:60,t0:.09,lane:-3.6},
+ {name:'NOVA',color:[.25,.55,.98],pace:58,t0:.09,lane:3.6},
+ {name:'RAZE',color:[.98,.72,.18],pace:56,t0:.045,lane:-3.6},
+ {name:'HALO',color:[.92,.92,.95],pace:54,t0:.045,lane:3.6},
+ {name:'ONYX',color:[.62,.3,.92],pace:57,t0:-.045,lane:-3.6},
+ {name:'FURY',color:[.98,.45,.75],pace:55,t0:-.045,lane:3.6}];
+var rivals=[];
+function resetRivals(){rivals=RIVAL_DEF.map((d,i)=>({...d,t:d.t0,off:d.lane,speed:0,phase:i*1.7,done:false,x:0,z:0,h:Math.PI/2,bump:0}));rivals.forEach(placeRival);}
+function placeRival(r){const tt=r.t,[px,,pz]=point(tt,r.off);r.x=px;r.z=pz;r.h=Math.atan2(RX*Math.cos(tt),-RZ*Math.sin(tt));}
+function playerTotal(){return (lap-1)*Math.PI*2+progress;}
+function racePosition(){const me=finished?Infinity:playerTotal();let p=1;for(const r of rivals){const rt=r.done?r.doneAt:r.t;if(finished){if(r.done&&r.doneTime<time)p++;}else if(rt>me)p++;}return p;}
+function ordinal(n){return n+(['th','st','nd','rd'][(n%100-20)%10]||['th','st','nd','rd'][n%100]||'th');}
+function updateRivals(dt){const me=playerTotal(),LAPS=Math.PI*2*3;
+ for(const r of rivals){
+  // corners are tightest at the ends of the long axis (sin t ~ 0)
+  const corner=.84+.16*Math.sin(r.t)**2;
+  // gentle rubber band so the pack stays around the player
+  const gap=r.t-me,band=Math.max(.9,Math.min(1.1,1-gap*.12));
+  let target=r.pace*corner*band;if(r.done)target=r.pace*.55;
+  r.speed+=Math.max(-20*dt,Math.min(14*dt,target-r.speed));
+  if(r.bump>0){r.bump-=dt;r.speed*=1-dt*1.5;}
+  r.phase+=dt*.35;const wantOff=r.lane+Math.sin(r.phase)*1.6;r.off+=(wantOff-r.off)*Math.min(1,dt*1.2);r.off=Math.max(-6.5,Math.min(6.5,r.off));
+  const ds=r.speed*dt,tl=Math.hypot(RX*Math.cos(r.t),RZ*Math.sin(r.t));r.t+=ds/tl;
+  if(!r.done&&r.t>=LAPS){r.done=true;r.doneAt=r.t+100;r.doneTime=time;}
+  placeRival(r);
+  // bump against the player
+  const dx=x-r.x,dz=z-r.z,d=Math.hypot(dx,dz);
+  if(d<2.6&&d>0.001){const push=(2.6-d)/2,nx=dx/d,nz=dz/d;x+=nx*push;z+=nz*push;
+   const side=Math.sign(nx*Math.cos(r.h)-nz*Math.sin(r.h))||1;r.off-=side*push*.6;
+   const rel=speed-r.speed;if(Math.abs(rel)>1){speed-=rel*.35;r.speed+=rel*.35;r.bump=.4;}}
+ }
+ // rivals don't drive through each other
+ for(let i=0;i<rivals.length;i++)for(let j=i+1;j<rivals.length;j++){const a=rivals[i],b=rivals[j];const dt2=(a.t-b.t)*RX,dof=a.off-b.off;if(Math.abs(dt2)<4.5&&Math.abs(dof)<2.2){const s=dof>=0?1:-1;a.off+=s*.05;b.off-=s*.05;const back=dt2<0?a:b;back.speed=Math.min(back.speed,(dt2<0?b:a).speed*.98);}}
+}
+function drawRivals(){for(const r of rivals)car(r.x,r.z,r.h,r.color);}
+resetRivals();
