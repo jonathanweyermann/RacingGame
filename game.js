@@ -31,28 +31,32 @@ const keys=new Set();let active=false,paused=false,finished=false,x=0,z=165,head
 try{best=Number(localStorage.getItem('apex-best'))||null;}catch{}
 const format=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${(t%60).toFixed(2).padStart(5,'0')}`;
 function reset(){resetRivals();x=0;z=165;heading=Math.PI/2;speed=0;nitro=1;time=0;lapTime=0;lap=1;progress=0;lastAngle=0;finished=false;cam=[-12,6,165];}
-function start(){reset();active=true;paused=false;$('overlay').classList.add('hidden');$('pause').textContent='PAUSE  P';}
-function pause(){if(!active||finished)return;paused=!paused;keys.clear();$('pause').textContent=paused?'RESUME  P':'PAUSE  P';$('message').textContent=paused?'PAUSED':'';}
+function start(){reset();active=true;paused=false;$('menu')?.classList.add('hidden');$('message').textContent='';$('overlay').classList.add('hidden');$('pause').innerHTML='MENU <kbd>P</kbd>';}
+function pause(){if(!active||finished)return;paused=!paused;keys.clear();$('pause').innerHTML='MENU <kbd>P</kbd>';$('message').textContent='';$('menu').classList.toggle('hidden',!paused);}
 $('start').onclick=start;$('pause').onclick=pause;
 window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','ShiftLeft','ShiftRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.repeat)return;if(e.code==='KeyP'||e.code==='Escape')pause();if(e.code==='KeyR')start();if(e.code==='Enter'&&(!active||finished))start();});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();if(active&&!paused&&!finished)pause();});
 function car(cx,cz,a,color){box(cx,.35,cz,1.9,.55,4,color,a);box(cx,.9,cz-.2*Math.cos(a),1.5,.55,1.75,[.10,.22,.27],a);const cs=Math.cos(a),sn=Math.sin(a);function part(lx,ly,lz,w,h,d,c){box(cx+lx*cs+lz*sn,ly,cz-lx*sn+lz*cs,w,h,d,c,a);}for(const side of [-1,1])for(const end of [-1,1])part(side*.98,.22,end*1.25,.34,.6,.8,[.025,.04,.05]);part(0,.9,-1.7,2.05,.12,.35,[.08,.13,.15]);for(const side of [-1,1]){part(side*.62,.67,1.98,.42,.13,.04,[.85,1,.8]);part(side*.65,.65,-2,.4,.14,.04,[1,.15,.09]);}if(boost)for(const side of [-1,1])part(side*.55,.35,-2.4,.22,.24,.7+random()*.8,[.3,.7,1]);}
 let boost=false;
 function frame(now){requestAnimationFrame(frame);const dt=Math.min((now-last)/1000||0,.04);last=now;const scale=Math.min(devicePixelRatio||1,1.7),w=Math.floor(viewW()*scale),h=Math.floor(viewH()*scale);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}
 boost=false;let offroad=Math.abs((Math.sqrt((x/RX)**2+(z/RZ)**2)-1)*125)>8.5;
-if(active&&!paused&&!finished){time+=dt;lapTime+=dt;const throttle=keys.has('ArrowUp')||mobile.gas,brake=keys.has('ArrowDown'),drift=keys.has('Space'),steer=Math.max(-1,Math.min(1,Number(keys.has('ArrowLeft'))-Number(keys.has('ArrowRight'))+mobile.steer));boost=throttle&&(keys.has('ShiftLeft')||keys.has('ShiftRight'))&&nitro>0&&speed>5;if(boost)nitro=Math.max(0,nitro-dt*.24);else nitro=Math.min(1,nitro+dt*.10);speed+=(throttle?(boost?25:16):0)*dt;if(brake)speed-= (speed>0?33:9)*dt;speed-=speed*(offroad?1.5:drift?.8:.17)*dt;speed=Math.max(-12,Math.min(boost?94:67,speed));heading+=steer*Math.min(Math.abs(speed)/15,1)*dt*(drift?2.15:1.15)*Math.sign(speed||1);x+=Math.sin(heading)*speed*dt;z+=Math.cos(heading)*speed*dt;if(Math.hypot(x,z)>650){x=0;z=165;heading=Math.PI/2;speed=0;lastAngle=0;progress=0;}updateRivals(dt);
+if(active&&!paused&&!finished){time+=dt;lapTime+=dt;const throttle=keys.has('ArrowUp')||mobile.gas,brake=keys.has('ArrowDown'),drift=keys.has('Space'),steer=Math.max(-1,Math.min(1,Number(keys.has('ArrowLeft'))-Number(keys.has('ArrowRight'))+mobile.steer));boost=throttle&&(keys.has('ShiftLeft')||keys.has('ShiftRight')||mobile.nitro)&&nitro>0&&speed>5;if(boost)nitro=Math.max(0,nitro-dt*.24);else nitro=Math.min(1,nitro+dt*.10);speed+=(throttle?(boost?25:16):0)*dt;if(brake)speed-= (speed>0?33:9)*dt;speed-=speed*(offroad?1.5:drift?.8:.17)*dt;speed=Math.max(-12,Math.min(boost?94:67,speed));heading+=steer*Math.min(Math.abs(speed)/15,1)*dt*(drift?2.15:1.15)*Math.sign(speed||1);x+=Math.sin(heading)*speed*dt;z+=Math.cos(heading)*speed*dt;if(Math.hypot(x,z)>650){x=0;z=165;heading=Math.PI/2;speed=0;lastAngle=0;progress=0;}updateRivals(dt);
 const angle=Math.atan2(x/RX,z/RZ);let delta=angle-lastAngle;if(delta>Math.PI)delta-=Math.PI*2;if(delta< -Math.PI)delta+=Math.PI*2;lastAngle=angle;if(!offroad)progress+=delta;if(progress>=Math.PI*2){progress-=Math.PI*2;if(!best||lapTime<best){best=lapTime;try{localStorage.setItem('apex-best',String(best));}catch{}}lapTime=0;lap++;if(lap>3){finished=true;speed=0;finishPos=racePosition();$('message').textContent=`P${finishPos} · ${format(time)}`;$('overlay').classList.remove('hidden');document.querySelector('h1').innerHTML='CIRCUIT<br><em>COMPLETE.</em>';document.querySelector('.intro p').textContent=`You finished ${ordinal(finishPos)} of ${rivals.length+1}. Three laps in ${format(time)}. Best lap: ${format(best)}.`;$('start').innerHTML='RACE AGAIN <span>↗</span>';}}}
 const desired=[x-Math.sin(heading)*11,5.6+Math.abs(speed)*.018,z-Math.cos(heading)*11];for(let i=0;i<3;i++)cam[i]+=(desired[i]-cam[i])*(1-Math.exp(-dt*7));gl.uniformMatrix4fv(vp,false,camera(cam,[x+Math.sin(heading)*10,1,z+Math.cos(heading)*10],boost?1.22:1.08));gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);draw(worldBuffer,staticData.length/6);vertices=[];car(x,z,heading,[.72,.98,.27]);drawRivals();gl.bindBuffer(gl.ARRAY_BUFFER,dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.DYNAMIC_DRAW);draw(dynamicBuffer,vertices.length/6);
 $('speed').textContent=String(Math.round(Math.abs(speed)*3.6)).padStart(3,'0');$('nitro').style.width=`${nitro*100}%`;$('time').textContent=format(time);$('best').textContent=best?format(best):'—';$('pos').innerHTML=`${racePosition()} <small>/ ${rivals.length+1}</small>`;$('lap').innerHTML=`0${Math.min(lap,3)} <small>/ 03</small>`;$('state').textContent=boost?'NITRO ENGAGED':offroad?'OFF TRACK':keys.has('Space')&&Math.abs(speed)>3?'HANDBRAKE':active?'MIDNIGHT CIRCUIT':'READY TO RACE';}
 requestAnimationFrame(frame);
 
 // Mobile: hold-to-gas button + gyroscope tilt steering
-var mobile={gas:false,steer:0};
+var mobile={gas:false,steer:0,nitro:false};
 (()=>{const touch=matchMedia('(pointer:coarse)').matches||'ontouchstart' in window;if(!touch)return;
 document.body.classList.add('mobile');
 const gas=document.createElement('button');gas.id='gas';gas.textContent='GAS';document.body.appendChild(gas);
 const tilt=document.createElement('button');tilt.id='tilt';tilt.textContent='TAP TO ENABLE TILT STEERING';document.body.appendChild(tilt);
 const on=e=>{e.preventDefault();mobile.gas=true;gas.classList.add('down');},off=e=>{e.preventDefault();mobile.gas=false;gas.classList.remove('down');};
-gas.addEventListener('pointerdown',on);['pointerup','pointercancel','pointerleave'].forEach(t=>gas.addEventListener(t,off));
+gas.addEventListener('pointerdown',on);
+const nit=document.createElement('button');nit.id='nitrobtn';nit.textContent='NITRO';document.body.appendChild(nit);
+const non=e=>{e.preventDefault();mobile.nitro=true;nit.classList.add('down');},noff=e=>{e.preventDefault();mobile.nitro=false;nit.classList.remove('down');};
+nit.addEventListener('pointerdown',non);['pointerup','pointercancel','pointerleave'].forEach(t=>nit.addEventListener(t,noff));
+['pointerup','pointercancel','pointerleave'].forEach(t=>gas.addEventListener(t,off));
 const onTilt=e=>{const ang=lockAngle==null?curAngle():lockAngle;
 let v=ang===90?e.beta:ang===-90||ang===270?-e.beta:e.gamma;if(v==null)return;
 const dead=3,max=30;v=Math.abs(v)<dead?0:(v-Math.sign(v)*dead)/(max-dead);mobile.steer=-Math.max(-1,Math.min(1,v));};
@@ -118,3 +122,14 @@ function updateRivals(dt){const me=playerTotal(),LAPS=Math.PI*2*3;
 }
 function drawRivals(){for(const r of rivals)car(r.x,r.z,r.h,r.color);}
 resetRivals();
+
+// Pause menu: resume / restart / quit to title
+(()=>{const m=document.createElement('div');m.id='menu';m.className='hidden';
+m.innerHTML='<div class="menu-box"><h2>PAUSED</h2><button data-a="resume">RESUME</button><button data-a="restart">RESTART RACE</button><button data-a="quit">QUIT TO TITLE</button></div>';
+document.body.appendChild(m);
+m.addEventListener('click',e=>{const a=e.target.dataset&&e.target.dataset.a;if(!a)return;
+ if(a==='resume')pause();
+ else if(a==='restart')start();
+ else if(a==='quit'){reset();active=false;paused=false;m.classList.add('hidden');$('message').textContent='';$('overlay').classList.remove('hidden');}});
+const pb=$('pause');pb.innerHTML='MENU <kbd>P</kbd>';
+})();

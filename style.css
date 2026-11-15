@@ -9,3 +9,12 @@
 body.mobile #hud footer{display:none}
 body.mobile{touch-action:none;overscroll-behavior:none}
 html.rotlock{position:fixed;left:50%;top:50%;overflow:hidden}
+#nitrobtn{position:fixed;right:44px;bottom:164px;width:84px;height:84px;border-radius:50%;border:3px solid #fff8;background:#c5ff56cc;color:#081b24;font:800 15px sans-serif;z-index:50;touch-action:none;user-select:none;-webkit-user-select:none}
+#nitrobtn.down{background:#e4ff9a;transform:scale(.94)}
+#menu{position:fixed;inset:0;background:#071b29cc;display:flex;align-items:center;justify-content:center;z-index:70}
+.menu-box{display:flex;flex-direction:column;gap:12px;min-width:260px}
+.menu-box h2{margin:0 0 10px;font-size:40px;font-style:italic;color:#c5ff56;letter-spacing:2px;text-align:center}
+.menu-box button{background:#102c36;border:1px solid #ffffff40;color:#fff;padding:18px;font-size:13px;font-weight:bold;letter-spacing:2px}
+.menu-box button[data-a=resume]{background:#c5ff56;color:#081b24;border:0}
+body.mobile .speed{right:auto;left:20px;text-align:left;bottom:40px}body.mobile .nitro-label kbd{display:none}
+#overlay:not(.hidden)~#gas,#overlay:not(.hidden)~#nitrobtn{display:none}
